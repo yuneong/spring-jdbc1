@@ -5,6 +5,7 @@ import hello.jdbc.domain.Member;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.*;
+import java.util.NoSuchElementException;
 
 /**
  * JDBC - DriverManager 사용
@@ -32,6 +33,35 @@ public class MemberRepositoryV0 {
             // ⭐리소스 정리 (역순으로 해야함)
             close(con, pstmt, null);
 
+        }
+    }
+
+    public Member findById(String memberId) throws SQLException {
+        String sql = "select * from member where member_id = ?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null; // 내부에 '커서' 존재
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, memberId);
+
+            rs = pstmt.executeQuery(); // 조회 쿼리 실행
+            if (rs.next()) { // 최초의 커서는 데이터를 가리키고 있지 않기에 최초 한번 호출해야함
+                Member member = new Member();
+                member.setMemberId(rs.getString("member_id"));
+                member.setMoney(rs.getInt("money"));
+                return member;
+            } else { // 더이상 데이터가 없다는 뜻
+                throw new NoSuchElementException("member not found memberId: " + memberId);
+            }
+        } catch (SQLException e) {
+            log.error("db error", e);
+            throw e;
+        } finally {
+            close(con, pstmt, rs);
         }
     }
 
